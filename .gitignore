@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+develop-eggs/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Build scratch
+.builder_*
+.build_metadata*
+.stage_*
+.spawn.*
+PUBLISH_BLOCKED.md
+BUILD_SETUP_NEXT_STEPS.md
+
+# Local agent scratch (never ship)
+.claude/
+CLAUDE.md
