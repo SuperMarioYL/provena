@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "name": "provena",
+  "github": "https://github.com/SuperMarioYL/provena",
+  "host": "provena.lei6393.com",
+  "lang": { "primary": "zh", "toggle": true },
+  "accent": ["#0071E3"],
+  "hero": {
+    "eyebrow": { "zh": "来源一变 · 下游即红 · 全图可见", "en": "Source changes · Claims go red · Full graph" },
+    "headline": { "zh": "代理的结论\n不再悄悄失效", "en": "Agent conclusions\nnever silently go stale" },
+    "sub": { "zh": "每条结论回链到机器可查的来源片段；来源一变，依赖结论即被级联标记失效，在一张图上看得见。", "en": "Every conclusion links to a machine-checkable source span; when a source changes, dependent claims are cascade-flagged stale — all visible on one graph." },
+    "command": "provena demo"
+  },
+  "advantages": [
+    {
+      "title": { "zh": "结论回链来源，不是黑盒解释", "en": "Claims link to sources, not black-box explanations" },
+      "body": { "zh": "每条代理结论都记录它从哪个文件片段、哪个模型版本、哪个网页推导而来——一个可查的数据流代理，不是事后编的理由。", "en": "Every agent conclusion records which file span, model version, or web URL it was derived from — a checkable dataflow trace, not a post-hoc rationalization." },
+      "chips": ["› 文件片段 / 模型版本 / 网页", "› 机器可查的数据流"]
+    },
+    {
+      "title": { "zh": "来源一变，下游即红", "en": "Source changes, downstream goes red" },
+      "body": { "zh": "编辑了来源文件？直接接地在上面的结论立刻被标记失效，并沿依赖链传递标记——Bazel 的 dirty-mark，但提升到代理结论节点。", "en": "Edited a source file? Claims grounded on it are flagged stale instantly, and the flag propagates along the dependency chain — Bazel dirty-marks lifted to agent-conclusion nodes." },
+      "chips": ["› 即时检测", "› 传递级联", "› 幂等标记"]
+    },
+    {
+      "title": { "zh": "一张图看完所有溯源", "en": "See all provenance on one graph" },
+      "body": { "zh": "所有结论-来源关系在一张交互式图上可见：哪条结论依赖哪个来源，哪条已经失效，一目了然。编辑来源后图上节点实时变红。", "en": "All claim-source relationships visible on one interactive graph: which conclusion depends on which source, which ones are stale — at a glance. Nodes turn red in real time after a source edit." },
+      "chips": ["› 可视化图", "› 实时变红", "› 本地运行"]
+    }
+  ],
+  "scene": { "kind": "mesh" },
+  "footer": { "tag": { "zh": "MIT 开源 · 本地运行 · 无需账号", "en": "MIT open source · runs locally · no account" } }
+}
