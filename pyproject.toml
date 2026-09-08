@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "provena"
 version = "0.1.0"
-description = "Provenance-cascade-correction for agent conclusions."
+description = "Record claim-to-source dependencies and mark downstream claims stale when tracked source content changes."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

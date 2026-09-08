@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "source_revision": "eea03e662430084fe51ae09988bfb67a47decc34",
+  "scope": "A temporary source file changes from limit=10 to limit=20, causing two explicit dependent claims to become stale. No model re-derivation.",
+  "steps": [
+    {
+      "label": "Recorded run",
+      "body": "A temporary source file changes from limit=10 to limit=20, causing two explicit dependent claims to become stale. No model re-derivation.",
+      "command": ".venv/bin/python examples/presentation-demo.py",
+      "output": "before: {\"limit\": \"fresh\", \"request\": \"fresh\"}\nflagged: ['limit', 'request']\nafter: {\"limit\": \"stale\", \"request\": \"stale\"}"
+    }
+  ]
+}

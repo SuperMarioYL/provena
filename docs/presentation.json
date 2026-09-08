@@ -1,0 +1,78 @@
+{
+  "name": "provena",
+  "tagline": "Flag conclusions when their sources change.",
+  "architecture": {
+    "title": "How Provena works",
+    "nodes": [
+      {
+        "title": "Source spans",
+        "detail": "provena/core/source.py"
+      },
+      {
+        "title": "Claim graph",
+        "detail": "provena/core/graph.py"
+      },
+      {
+        "title": "Mutation check",
+        "detail": "provena/core/cascade.py"
+      },
+      {
+        "title": "Stale claims",
+        "detail": "Local graph / UI"
+      }
+    ],
+    "edges": [
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        3
+      ]
+    ]
+  },
+  "process": {
+    "title": "From input to a useful result",
+    "steps": [
+      {
+        "title": "Record source",
+        "detail": "limit=10"
+      },
+      {
+        "title": "Connect claims",
+        "detail": "Direct and transitive dependents"
+      },
+      {
+        "title": "Change source",
+        "detail": "Both claims become stale"
+      }
+    ],
+    "result": "Changing the source marks both limit and request claims stale."
+  },
+  "integrations": {
+    "title": "Supported input and output routes",
+    "items": [
+      {
+        "title": "FileSpan",
+        "detail": "Tracked file line ranges"
+      },
+      {
+        "title": "Claim recording",
+        "detail": "Grounding and dependencies"
+      },
+      {
+        "title": "Cascade callback",
+        "detail": "Application notification seam"
+      },
+      {
+        "title": "JSON / local UI",
+        "detail": "Graph inspection"
+      }
+    ]
+  }
+}

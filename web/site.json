@@ -1,33 +1,215 @@
 {
-  "schema": 1,
+  "schema": 3,
   "name": "provena",
   "github": "https://github.com/SuperMarioYL/provena",
   "host": "provena.lei6393.com",
-  "lang": { "primary": "zh", "toggle": true },
-  "accent": ["#0071E3"],
+  "palette": "auto",
+  "lang": {
+    "primary": "en",
+    "toggle": true
+  },
+  "meta": {
+    "visual_style": "neon-particle",
+    "demo_source": "docs/demo-results.json"
+  },
   "hero": {
-    "eyebrow": { "zh": "来源一变 · 下游即红 · 全图可见", "en": "Source changes · Claims go red · Full graph" },
-    "headline": { "zh": "代理的结论\n不再悄悄失效", "en": "Agent conclusions\nnever silently go stale" },
-    "sub": { "zh": "每条结论回链到机器可查的来源片段；来源一变，依赖结论即被级联标记失效，在一张图上看得见。", "en": "Every conclusion links to a machine-checkable source span; when a source changes, dependent claims are cascade-flagged stale — all visible on one graph." },
-    "command": "provena demo"
+    "headline": {
+      "en": "Flag conclusions when their sources change.",
+      "zh": "来源变化时标记依赖结论。"
+    },
+    "sub": {
+      "en": "Provena records claims, source spans and claim dependencies in a graph, then propagates stale status when tracked content changes.",
+      "zh": "Provena 在图中记录结论、来源片段与结论依赖，并在被跟踪内容变化时传播 stale 状态。"
+    },
+    "href": "#quickstart"
   },
   "advantages": [
     {
-      "title": { "zh": "结论回链来源，不是黑盒解释", "en": "Claims link to sources, not black-box explanations" },
-      "body": { "zh": "每条代理结论都记录它从哪个文件片段、哪个模型版本、哪个网页推导而来——一个可查的数据流代理，不是事后编的理由。", "en": "Every agent conclusion records which file span, model version, or web URL it was derived from — a checkable dataflow trace, not a post-hoc rationalization." },
-      "chips": ["› 文件片段 / 模型版本 / 网页", "› 机器可查的数据流"]
+      "title": {
+        "en": "Explicit grounding",
+        "zh": "明确来源关联"
+      },
+      "body": {
+        "en": "Claims link to inspectable source objects.",
+        "zh": "结论关联可检查来源对象。"
+      }
     },
     {
-      "title": { "zh": "来源一变，下游即红", "en": "Source changes, downstream goes red" },
-      "body": { "zh": "编辑了来源文件？直接接地在上面的结论立刻被标记失效，并沿依赖链传递标记——Bazel 的 dirty-mark，但提升到代理结论节点。", "en": "Edited a source file? Claims grounded on it are flagged stale instantly, and the flag propagates along the dependency chain — Bazel dirty-marks lifted to agent-conclusion nodes." },
-      "chips": ["› 即时检测", "› 传递级联", "› 幂等标记"]
+      "title": {
+        "en": "Transitive invalidation",
+        "zh": "传递失效标记"
+      },
+      "body": {
+        "en": "Downstream claims inherit the need for review.",
+        "zh": "下游结论也会被标为待检查。"
+      }
     },
     {
-      "title": { "zh": "一张图看完所有溯源", "en": "See all provenance on one graph" },
-      "body": { "zh": "所有结论-来源关系在一张交互式图上可见：哪条结论依赖哪个来源，哪条已经失效，一目了然。编辑来源后图上节点实时变红。", "en": "All claim-source relationships visible on one interactive graph: which conclusion depends on which source, which ones are stale — at a glance. Nodes turn red in real time after a source edit." },
-      "chips": ["› 可视化图", "› 实时变红", "› 本地运行"]
+      "title": {
+        "en": "No model needed",
+        "zh": "无需模型"
+      },
+      "body": {
+        "en": "Hash comparison and graph traversal are deterministic.",
+        "zh": "哈希比较与图遍历具有确定性。"
+      }
     }
   ],
-  "scene": { "kind": "mesh" },
-  "footer": { "tag": { "zh": "MIT 开源 · 本地运行 · 无需账号", "en": "MIT open source · runs locally · no account" } }
+  "demo": {
+    "title": {
+      "en": "Run it on a complete example",
+      "zh": "运行完整示例"
+    },
+    "note": {
+      "en": "Create a temporary one-line source and two dependent claims, edit limit=10 to limit=20, then inspect the propagated status.",
+      "zh": "创建临时单行来源与两条依赖结论，将 limit=10 改为 limit=20，再检查传播状态。"
+    },
+    "source": "https://github.com/SuperMarioYL/provena/blob/main/docs/demo-results.json",
+    "steps": [
+      {
+        "label": "Recorded run",
+        "body": "A temporary source file changes from limit=10 to limit=20, causing two explicit dependent claims to become stale. No model re-derivation.",
+        "command": ".venv/bin/python examples/presentation-demo.py",
+        "output": "before: {\"limit\": \"fresh\", \"request\": \"fresh\"}\nflagged: ['limit', 'request']\nafter: {\"limit\": \"stale\", \"request\": \"stale\"}",
+        "image": "/assets/presentation/demo-0-light.svg",
+        "imageDark": "/assets/presentation/demo-0-dark.svg"
+      }
+    ]
+  },
+  "quickstart": {
+    "title": {
+      "en": "Try it locally",
+      "zh": "本地上手"
+    },
+    "body": {
+      "en": "Create a temporary one-line source and two dependent claims, edit limit=10 to limit=20, then inspect the propagated status.",
+      "zh": "创建临时单行来源与两条依赖结论，将 limit=10 改为 limit=20，再检查传播状态。"
+    },
+    "steps": [
+      {
+        "title": {
+          "en": "Install from source",
+          "zh": "从源码安装"
+        },
+        "code": "git clone https://github.com/SuperMarioYL/provena.git\ncd provena\nuv venv .venv\nuv pip install --python .venv/bin/python -e .\nsource .venv/bin/activate"
+      },
+      {
+        "title": {
+          "en": "Run the included example",
+          "zh": "运行随仓示例"
+        },
+        "code": ".venv/bin/python examples/presentation-demo.py"
+      }
+    ]
+  },
+  "limitations": [
+    {
+      "en": "The engine flags claims for review; it does not automatically re-derive or correct them.",
+      "zh": "引擎标记待检查结论，不会自动重新推导或纠正。"
+    },
+    {
+      "en": "A recorded dependency is supplied by the caller and does not prove the source actually supports the claim.",
+      "zh": "依赖由调用者提供，不证明来源确实支持结论。"
+    },
+    {
+      "en": "File line spans can shift after edits. Source selection and graph completeness affect the usefulness of invalidation.",
+      "zh": "编辑后文件行片段可能移动；来源选择与图完整性影响失效标记的作用。"
+    }
+  ],
+  "scene": {
+    "kind": "neon-graph",
+    "fallback": "/assets/presentation/scene-dark.svg",
+    "fallbackLight": "/assets/presentation/scene-light.svg"
+  },
+  "story": {
+    "intro": {
+      "title": {
+        "en": "A concrete task",
+        "zh": "从实际任务出发"
+      },
+      "body": {
+        "en": "A conclusion can outlive the file fragment that supported it. Explicit dependency edges show which claims need another look when that fragment changes.",
+        "zh": "结论可能在支撑它的文件片段变化后继续被使用。明确依赖边可以指出哪些结论需要重新检查。"
+      }
+    },
+    "sections": [
+      {
+        "title": {
+          "en": "Follow the operation",
+          "zh": "处理过程"
+        },
+        "body": {
+          "en": "record_claim registers source spans and edges in ClaimDependencyGraph. CascadeEngine compares current source hashes with recorded hashes, then traverses reverse claim dependencies to mark affected conclusions stale. The optional UI displays that state.",
+          "zh": "record_claim 在 ClaimDependencyGraph 中登记来源片段与边；CascadeEngine 比较当前和记录哈希，再沿反向结论依赖遍历，将受影响结论标为 stale。可选 UI 展示这些状态。"
+        },
+        "image": {
+          "light": "/assets/presentation/process-light.svg",
+          "dark": "/assets/presentation/process-dark.svg",
+          "alt": {
+            "en": "Follow the operation",
+            "zh": "处理过程"
+          }
+        }
+      },
+      {
+        "title": {
+          "en": "How Provena works",
+          "zh": "Provena 的工作方式"
+        },
+        "body": {
+          "en": "record_claim registers source spans and edges in ClaimDependencyGraph. CascadeEngine compares current source hashes with recorded hashes, then traverses reverse claim dependencies to mark affected conclusions stale. The optional UI displays that state.",
+          "zh": "record_claim 在 ClaimDependencyGraph 中登记来源片段与边；CascadeEngine 比较当前和记录哈希，再沿反向结论依赖遍历，将受影响结论标为 stale。可选 UI 展示这些状态。"
+        },
+        "image": {
+          "light": "/assets/presentation/architecture-light.svg",
+          "dark": "/assets/presentation/architecture-dark.svg",
+          "alt": {
+            "en": "How Provena works",
+            "zh": "Provena 的工作方式"
+          }
+        }
+      },
+      {
+        "title": {
+          "en": "Connect the pieces",
+          "zh": "输入与输出"
+        },
+        "body": {
+          "en": "The following routes are implemented in the source. Choose the input that matches your task and keep the resulting artifact with your project.",
+          "zh": "以下路径已有源码实现。按任务选择输入，并把生成的结果与项目一起保存。"
+        },
+        "image": {
+          "light": "/assets/presentation/integrations-light.svg",
+          "dark": "/assets/presentation/integrations-dark.svg",
+          "alt": {
+            "en": "Connect the pieces",
+            "zh": "输入与输出"
+          }
+        }
+      }
+    ],
+    "details": [
+      {
+        "title": {
+          "en": "Configuration",
+          "zh": "配置"
+        },
+        "body": {
+          "en": "Use FileSpan.from_file(path, start, end) to capture a source span. record_claim accepts grounded_on source objects or registered IDs and depends_on claim IDs. Integrations should own graph persistence and re-derivation after receiving stale flags.",
+          "zh": "使用 FileSpan.from_file(path, start, end) 捕获来源片段。record_claim 接受 grounded_on 来源对象或已登记 ID，以及 depends_on 结论 ID。集成方应负责图持久化及收到 stale 后的重新推导。"
+        }
+      },
+      {
+        "title": {
+          "en": "Further use",
+          "zh": "进一步使用"
+        },
+        "body": {
+          "en": "The CLI exposes the following operations. Commands after the example use your own paths or identifiers.",
+          "zh": "CLI 提供以下操作。示例之外的命令需要替换成你的文件路径或标识。"
+        },
+        "code": "provena graph --json\nprovena check\n# Interactive local demo server:\nprovena demo"
+      }
+    ]
+  }
 }

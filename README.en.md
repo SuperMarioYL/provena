@@ -1,148 +1,126 @@
-<div align="right"><sub><b>English</b>&nbsp;&nbsp;⇄&nbsp;&nbsp;<a href="./README.md">中文</a></sub></div>
+[简体中文](./README.md) · [Website](https://provena.lei6393.com) · [GitHub](https://github.com/SuperMarioYL/provena)
 
-<p align="center">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/hero-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="./assets/hero-light.svg">
-  <img src="./assets/hero-light.svg" width="880" alt="Provena — provenance-cascade for agent conclusions">
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="./assets/presentation/hero-mobile-dark.svg">
+  <source media="(max-width: 600px)" srcset="./assets/presentation/hero-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/presentation/hero-dark.svg">
+  <img src="./assets/presentation/hero-light.svg" width="960" alt="Hero diagram">
 </picture>
-</p>
 
-<p align="center"><sub>Provena is the provenance layer for long-horizon agent teams: when a source mutates, dependent conclusions are cascade-flagged stale.</sub></p>
+# provena
 
-<p align="center">
-  <a href="./LICENSE"><img src="https://img.shields.io/github/license/SuperMarioYL/provena?color=0071E3" alt="license"></a>
-  <a href="https://github.com/SuperMarioYL/provena/releases"><img src="https://img.shields.io/github/v/release/SuperMarioYL/provena?color=10A37F" alt="release"></a>
-  <a href="https://github.com/SuperMarioYL/provena/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/SuperMarioYL/provena/ci.yml?branch=main&label=CI&color=5E5CE6" alt="CI"></a>
-  <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white" alt="python">
-</p>
+**Flag conclusions when their sources change.**
 
-**Every agent conclusion is linked back to a machine-checkable source span; when a source mutates (a file edit, a model swap, a web page update), dependent conclusions are cascade-flagged stale and queued for re-derivation — all visible on one claim-to-source graph.**
+Provena records claims, source spans and claim dependencies in a graph, then propagates stale status when tracked content changes.
 
-<h2><img src="https://api.iconify.design/tabler:topology-star-3.svg?color=%230071E3&width=24" height="22" align="absmiddle" alt=""> Architecture</h2>
+## Why use it
 
-<p align="center">
+A conclusion can outlive the file fragment that supported it. Explicit dependency edges show which claims need another look when that fragment changes.
+
+- **Explicit grounding** — Claims link to inspectable source objects.
+- **Transitive invalidation** — Downstream claims inherit the need for review.
+- **No model needed** — Hash comparison and graph traversal are deterministic.
+
+## Architecture
+
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/atlas-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="./assets/atlas-light.svg">
-  <img src="./assets/atlas-light.svg" width="880" alt="architecture: source spans -> claim-to-source graph -> cascade engine -> graph UI + alert webhook">
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="./assets/presentation/architecture-mobile-dark.svg">
+  <source media="(max-width: 600px)" srcset="./assets/presentation/architecture-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/presentation/architecture-dark.svg">
+  <img src="./assets/presentation/architecture-light.svg" width="960" alt="Architecture diagram">
 </picture>
-</p>
 
-The core primitive is the **ClaimDependencyGraph**: a DAG whose nodes are *claims* (agent-emitted conclusions) and *sources* (machine-checkable spans), with two edge types:
+record_claim registers source spans and edges in ClaimDependencyGraph. CascadeEngine compares current source hashes with recorded hashes, then traverses reverse claim dependencies to mark affected conclusions stale. The optional UI displays that state.
 
-- `grounded_on`: claim -> source (the conclusion was derived from this span)
-- `depends_on`: claim -> claim (one conclusion built on another)
+| Component | Responsibility |
+| --- | --- |
+| `Source spans` | provena/core/source.py |
+| `Claim graph` | provena/core/graph.py |
+| `Mutation check` | provena/core/cascade.py |
+| `Stale claims` | Local graph / UI |
 
-On any source mutation, the engine flags the directly-grounded claims `stale` and propagates `stale` **transitively** along `depends_on` edges — Bazel-style dirty-marking lifted from code-graph nodes to *agent-claim* nodes. The unit of invalidation is an agent's emitted *conclusion*, not a file or a code-graph node.
+## Install and quickstart
 
-## Contents
-
-- [Why this exists](#why-this-exists)
-- [Install & Quickstart](#install--quickstart)
-- [Usage](#usage)
-- [Demo](#demo)
-- [Roadmap](#roadmap)
-- [License](#license)
-
-## Why this exists
-
-When a fact an agent grounded a conclusion on mutates (a function signature refactored, a model swapped, a web page updated), every downstream conclusion goes **silently stale** and no existing tool re-flags it — the agent keeps reasoning on conclusions that no longer hold. This is exactly the pain *Verschlimmbesserung* (an "improvement" that makes things worse) names: upstream changes, downstream degrades quietly.
-
-Provena links each conclusion backward to a **machine-checkable source span** (a dataflow proxy, not a black-box rationale) and cascade-flags dependent conclusions the moment their ground shifts, surfaced on a live claim-to-source graph. If it exists, stale conclusions stop being silent — they get flagged and queued for re-derivation.
-
-## Install & Quickstart
+Build with the version declared in the repository manifest. Run the example from the repository root.
 
 ```bash
-git clone https://github.com/SuperMarioYL/provena && cd provena
-pip install -e .
-provena demo            # open http://127.0.0.1:8000, edit provena/demo/source.py -> dependents turn red
+git clone https://github.com/SuperMarioYL/provena.git
+cd provena
+uv venv .venv
+uv pip install --python .venv/bin/python -e .
+source .venv/bin/activate
 ```
 
-> Or with [uv](https://docs.astral.sh/uv/): `uv run provena demo`.
+Create a temporary one-line source and two dependent claims, edit limit=10 to limit=20, then inspect the propagated status.
 
-<details>
-<summary>Sample output (provena demo)</summary>
+```bash
+.venv/bin/python examples/presentation-demo.py
+```
 
+## Recorded demo
+
+<picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="./assets/presentation/process-mobile-dark.svg">
+  <source media="(max-width: 600px)" srcset="./assets/presentation/process-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/presentation/process-dark.svg">
+  <img src="./assets/presentation/process-light.svg" width="960" alt="Process diagram">
+</picture>
+
+Changing the source marks both limit and request claims stale.
+
+```text
+before: {"limit": "fresh", "request": "fresh"}
+flagged: ['limit', 'request']
+after: {"limit": "stale", "request": "stale"}
 ```
-Provena demo — http://127.0.0.1:8000
-edit the source to flag dependents: .../provena/demo/source.py
-watching .../provena/demo/source.py for mutations (live edit -> flag)
-graph ready: 5 claims, 5 sources
-# after editing parse_config's signature:
-[cascade] 2 claim(s) flagged stale by file:.../source.py:15-17
-  - claim_....  `parse_config` is defined at ...:15-17 ...
-  - claim_....  The module exposes a stable public surface of callables ...
-```
-</details>
+
+The complete command and output are recorded in [docs/demo-results.json](./docs/demo-results.json). Inputs and reproduction code are included in the repository.
+
+![Existing terminal recording](./assets/demo.gif)
+
+The existing recording is retained for context; the text example above documents the reproducible scenario.
 
 ## Usage
 
-<h3><img src="https://api.iconify.design/tabler:terminal-2.svg?color=%230071E3&width=20" height="18" align="absmiddle" alt=""> Subcommands</h3>
+The CLI exposes the following operations. Commands after the example use your own paths or identifiers.
 
 ```bash
-# print the claim-to-source DAG (m1 done criterion)
 provena graph --json
-
-# explain a conclusion's provenance (which spans it grounds on + which claims it depends on)
-provena trace <claim_id>
-
-# diff the working tree against the git baseline and list stale claims (run after an edit)
 provena check
-
-# boot the toy agent + local UI server + file watcher (edit -> flag -> alert)
+# Interactive local demo server:
 provena demo
 ```
 
-The programming API is equally direct:
+## Configuration
 
-```python
-from provena.core.graph import ClaimDependencyGraph
-from provena.core.provenance import record_claim
-from provena.core.source import FileSpan
+Use FileSpan.from_file(path, start, end) to capture a source span. record_claim accepts grounded_on source objects or registered IDs and depends_on claim IDs. Integrations should own graph persistence and re-derivation after receiving stale flags.
 
-g = ClaimDependencyGraph()
-span = FileSpan.from_file("kb.py", 1, 2)
-claim = record_claim(g, "`parse_config` returns a dict.", grounded_on=[span])
-print(g.to_json(indent=2))
-```
+## Integrations and responsibilities
 
-More examples in [`examples/`](./examples).
+<picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="./assets/presentation/integrations-mobile-dark.svg">
+  <source media="(max-width: 600px)" srcset="./assets/presentation/integrations-mobile-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/presentation/integrations-dark.svg">
+  <img src="./assets/presentation/integrations-light.svg" width="960" alt="Integrations diagram">
+</picture>
 
-## Demo
+The following routes are implemented in the source. Choose the input that matches your task and keep the resulting artifact with your project.
 
-<h3><img src="https://api.iconify.design/tabler:photo.svg?color=%230071E3&width=20" height="18" align="absmiddle" alt=""> edit a source -> dependents cascade-flag stale</h3>
+| Route | Implemented role |
+| --- | --- |
+| FileSpan | Tracked file line ranges |
+| Claim recording | Grounding and dependencies |
+| Cascade callback | Application notification seam |
+| JSON / local UI | Graph inspection |
 
-![demo](assets/demo.gif)
+## Limits and next steps
 
-Edit a function signature in `provena/demo/source.py` that an agent conclusion cited; `provena check` flags the grounded claim and every claim depending on it as stale.
+- The engine flags claims for review; it does not automatically re-derive or correct them.
+- A recorded dependency is supplied by the caller and does not prove the source actually supports the claim.
+- File line spans can shift after edits. Source selection and graph completeness affect the usefulness of invalidation.
 
-## Roadmap
+Automatic re-derivation and broader source adapters are future integration work. The current core owns recording and stale propagation.
 
-<h3><img src="https://api.iconify.design/tabler:map-2.svg?color=%230071E3&width=20" height="18" align="absmiddle" alt=""> Milestones</h3>
+## License and contributions
 
-- [x] **m1** — claim->source data model + provenance recording; toy agent emits graph-queryable conclusions (`provena graph --json`)
-- [x] **m2** — file-mutation detection (watchfiles) + transitive stale propagation over the claim DAG (`provena check`)
-- [x] **m3** — FastAPI + vis-network graph view, flagged nodes highlighted, click-to-inspect spans (`provena demo` end-to-end < 10 min)
-
-**Future (explicitly out of scope for v0.1):**
-
-- Real-agent framework plugins (Claude Code / Cursor / LangChain) — v0.1 ships a toy scripted agent only
-- Executing re-derivation (auto-re-running the agent) — v0.1 flags only; it never auto-re-derives
-- Persistent storage / DB — in-memory graph only
-- Multi-user, auth, cloud hosting, SSO
-- Collaboration or dashboards beyond the single-user local graph view
-- Full OpenTelemetry GenAI collector pipeline — modeled spans, not a real collector
-- Enterprise license / real billing system (the alert-webhook is a stub previewing the paid tier)
-- Custom-trained models / ML
-- Web-source and model-version mutation watchers (file-span only; model/web are stubbed interfaces)
-
-**Commercial path:** free OSS core (MIT) + a hosted team tier (managed claim-to-source graph storage + cascade dashboards + 飞书/Slack alerting). The demo's alert-webhook stub previews the paid tier.
-
-**Kill criteria:** after one month live on GitHub + Gitee with 3 launch activities, abandon if the combined stars are <50 AND zero organic issues from users attempting to integrate Provena into a real agent, AND the 5 pre-build interviews returned <2 willing-to-instrument. A primitive nobody wires in is not a business — even with stars.
-
-## License
-
-MIT — see [`LICENSE`](./LICENSE). Issues and PRs welcome: [issues](https://github.com/SuperMarioYL/provena/issues).
-
-<p align="center"><sub><a href="./LICENSE">MIT</a> © 2026 SuperMarioYL</sub></p>
+See [LICENSE](./LICENSE). When reporting an issue, include a minimal input, the command, and the observed output.

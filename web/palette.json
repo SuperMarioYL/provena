@@ -1,0 +1,38 @@
+{
+  "mode": "auto",
+  "id": "56e65e-6ae7b3-c4f6ac-b58619bbb2e0",
+  "identity": "https://github.com/supermarioyl/provena",
+  "primary": "#56e65e",
+  "secondary": "#6ae7b3",
+  "highlight": "#c4f6ac",
+  "dark": {
+    "bg": "#050c0d",
+    "panel": "#0c1718",
+    "code": "#0a1714",
+    "ink": "#f3fdee",
+    "muted": "#95b9a9",
+    "line": "#173c1f",
+    "primary": "#56e65e",
+    "secondary": "#6ae7b3",
+    "highlight": "#c4f6ac",
+    "accent": "#56e65e",
+    "buttonStart": "#338737",
+    "buttonEnd": "#3c8366",
+    "buttonText": "#ffffff"
+  },
+  "light": {
+    "bg": "#f9fef9",
+    "panel": "#f7fef7",
+    "code": "#f3fdf4",
+    "ink": "#132a1d",
+    "muted": "#557b6c",
+    "line": "#cbf7ce",
+    "primary": "#318336",
+    "secondary": "#3b8064",
+    "highlight": "#627a56",
+    "accent": "#318336",
+    "buttonStart": "#338737",
+    "buttonEnd": "#3c8366",
+    "buttonText": "#ffffff"
+  }
+}
