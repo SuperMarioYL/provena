@@ -30,6 +30,7 @@ from watchfiles import awatch
 from ..core.cascade import CascadeEngine
 from ..core.provenance import trace_provenance
 from ..demo.agent import build_demo_graph
+from .. import __version__
 
 log = logging.getLogger("provena.ui")
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -64,7 +65,7 @@ def create_app(
 
     engine = CascadeEngine(graph, on_flag=on_flag)
 
-    app = FastAPI(title="Provena", version="0.1.0")
+    app = FastAPI(title="Provena", version=__version__)
     app.state.graph = graph
     app.state.engine = engine
     app.state.source_path = str(source_path)

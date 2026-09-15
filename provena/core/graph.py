@@ -79,7 +79,19 @@ class ClaimDependencyGraph:
             if dep not in self._claims:
                 raise KeyError(f"claim {claim.id!r} depends on unknown claim {dep!r}")
         if claim.id in self._claims:
-            raise ValueError(f"duplicate claim id: {claim.id!r}")
+            existing = self._claims[claim.id]
+            same_conclusion = (
+                existing.text == claim.text
+                and existing.grounded_on == claim.grounded_on
+                and existing.depends_on == claim.depends_on
+            )
+            if not same_conclusion:
+                raise ValueError(f"duplicate claim id: {claim.id!r}")
+            # Identical re-derivation lands on the stored node (see
+            # ``provenance._claim_id``: stable ids exist so re-emitting the
+            # same conclusion is a no-op, not a crash). created_at/status of
+            # the stored node are left untouched.
+            return existing
         self._claims[claim.id] = claim
         for sid in claim.grounded_on:
             self._grounded_index[sid].add(claim.id)

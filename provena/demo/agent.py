@@ -48,7 +48,15 @@ class ToyAgent:
         if graph is None:
             graph = ClaimDependencyGraph()
 
-        text = self.source_path.read_text(encoding="utf-8")
+        if baseline_text is not None:
+            # Baseline mode (provena check): the claims under check are the
+            # ones recorded at baseline time, so the AST walk parses the
+            # baseline — never the edited (or deleted) working tree. Otherwise
+            # a removed function silently drops its claim from the check
+            # instead of surfacing it as stale.
+            text = baseline_text
+        else:
+            text = self.source_path.read_text(encoding="utf-8")
         tree = ast.parse(text, filename=str(self.source_path))
         n_lines = len(text.splitlines())
 

@@ -16,7 +16,7 @@ from .core.graph import Claim, ClaimDependencyGraph, ClaimStatus
 from .core.provenance import ProvenanceTrace, record_claim, trace_provenance
 from .core.source import FileSpan, ModelVersion, Source, WebUrl
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "CascadeEngine",

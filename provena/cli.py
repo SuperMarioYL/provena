@@ -4,10 +4,13 @@ Subcommands (mvp_plan §5):
 
 * ``provena graph [--json]`` — print the claim-to-source DAG. **m1 done criterion.**
 * ``provena trace <claim_id>`` — show the backward provenance of a claim.
-* ``provena check`` — flag claims whose grounded source drifted from git HEAD.
-  Uses the working tree vs. the committed baseline, so no database is needed.
+* ``provena check [--fail-on-stale]`` — flag claims whose grounded source
+  drifted from git HEAD. Uses the working tree vs. the committed baseline, so
+  no database is needed. ``--fail-on-stale`` exits 1 when anything is flagged
+  (a CI / pre-commit gate; the default exit code stays 0).
 * ``provena demo`` — boot the toy agent + local UI server with a live file
   watcher (the edit -> flag -> graph loop).
+* ``provena --version`` — print the package version.
 
 The CLI is a thin orchestration layer over :mod:`provena.core`,
 :mod:`provena.demo`, and :mod:`provena.ui`; it owns no graph state itself.
@@ -23,6 +26,7 @@ from typing import Optional
 
 import typer
 
+from . import __version__
 from .core.cascade import CascadeEngine
 from .core.graph import ClaimStatus
 from .core.provenance import trace_provenance
@@ -33,7 +37,22 @@ app = typer.Typer(
     help="Provenance-cascade-correction for agent conclusions.",
     no_args_is_help=True,
     add_completion=False,
+    invoke_without_command=True,
 )
+
+
+@app.callback()
+def _root(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        help="Show the provena version and exit.",
+    ),
+) -> None:
+    """Record claim-to-source dependencies; flag stale conclusions on change."""
+    if version:
+        typer.echo(f"provena {__version__}")
+        raise typer.Exit()
 
 
 def _git_head_text(file_path: Path) -> Optional[str]:
@@ -119,6 +138,11 @@ def trace(
 @app.command()
 def check(
     source: Optional[Path] = typer.Option(None, "--source", help="Demo source file."),
+    fail_on_stale: bool = typer.Option(
+        False,
+        "--fail-on-stale",
+        help="Exit with code 1 when any claim is flagged stale (CI / pre-commit gate).",
+    ),
 ) -> None:
     """Flag claims whose grounded source drifted from the committed baseline.
 
@@ -148,9 +172,11 @@ def check(
         claim = g.get_claim(cid)
         typer.echo(f"  - {cid}  {claim.text}")
     typer.secho(
-        "re-derive the flagged conclusions (v0.1 flags only; no auto re-derivation).",
+        "re-derive the flagged conclusions (flags only; no auto re-derivation).",
         fg=typer.colors.YELLOW,
     )
+    if fail_on_stale:
+        raise typer.Exit(code=1)
 
 
 @app.command()

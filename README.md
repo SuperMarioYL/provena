@@ -87,8 +87,12 @@ CLI 提供以下操作。示例之外的命令需要替换成你的文件路径�
 ```bash
 provena graph --json
 provena check
+# CI / pre-commit 阻断：有结论被标记失效时以退出码 1 结束
+provena check --fail-on-stale
 # Interactive local demo server:
 provena demo
+# 版本查询
+provena --version
 ```
 
 ## 配置

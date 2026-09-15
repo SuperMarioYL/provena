@@ -64,7 +64,8 @@ def record_claim(
 
     ``grounded_on`` accepts :class:`Source` values (registered on the fly) or
     ``source_id`` strings of sources already in the graph. ``depends_on`` is a
-    list of claim ids the new conclusion builds on. Returns the stored claim.
+    list of claim ids the new conclusion builds on. Returns the stored claim
+    (on an identical re-derivation this is the pre-existing node).
     """
     source_ids: list[str] = []
     for entry in grounded_on:
@@ -88,8 +89,7 @@ def record_claim(
         status=ClaimStatus.FRESH,
         created_at=_now_iso(),
     )
-    graph.add_claim(claim)
-    return claim
+    return graph.add_claim(claim)
 
 
 def trace_provenance(graph: ClaimDependencyGraph, claim_id: str) -> ProvenanceTrace:

@@ -101,6 +101,44 @@ def test_record_claim_stable_id(tmp_path: Path) -> None:
     assert c1.id == c2.id  # deterministic -> re-running the agent is stable
 
 
+def test_record_claim_rederivation_lands_on_existing_node(tmp_path: Path) -> None:
+    """Re-emitting the identical conclusion is a no-op, not a crash.
+
+    The documented stability contract (provenance._claim_id): re-deriving the
+    same conclusion should land on the same node rather than fragment the
+    graph. Previously add_claim raised ValueError on the deterministic id
+    collision.
+    """
+    src = tmp_path / "kb.py"
+    _write_source(src, "def f():\n    return 1\n")
+    g = ClaimDependencyGraph()
+    span = FileSpan.from_file(src, 1, 2)
+    first = record_claim(g, "same conclusion.", grounded_on=[span])
+    second = record_claim(g, "same conclusion.", grounded_on=[span])
+    assert second is first
+    assert len(g.claims()) == 1  # no fragmented duplicate
+
+
+def test_toy_agent_rerun_into_same_graph_is_stable(tmp_path: Path) -> None:
+    """Re-running the (deterministic) agent into one graph is idempotent."""
+    from provena.demo.agent import ToyAgent
+
+    src = tmp_path / "source.py"
+    _write_source(src, """
+        def a():
+            return 1
+
+        def b():
+            return 2
+    """)
+    agent = ToyAgent(source_path=src)
+    g = ClaimDependencyGraph()
+    agent.run(graph=g)
+    agent.run(graph=g)  # previously raised ValueError: duplicate claim id
+    # one claim per function + the module-level summary claim
+    assert len(g.claims()) == 3
+
+
 # --- trace ----------------------------------------------------------------
 
 

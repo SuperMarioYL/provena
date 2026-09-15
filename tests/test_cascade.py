@@ -199,3 +199,72 @@ def test_toy_agent_graph_cascade_on_edit(tmp_path: Path) -> None:
     flagged = engine.check_all()
     assert flagged  # something got flagged
     assert all(g.get_claim(c).status is ClaimStatus.STALE for c in flagged)
+
+
+# --- deletion: the strongest mutation must flag, not crash -----------------
+
+
+def test_deleted_source_flags_grounded_claims(tmp_path: Path) -> None:
+    """Deleting the tracked file flags every grounded claim (no crash)."""
+    src = tmp_path / "kb.py"
+    _write_source(src, "def f():\n    return 1\n")
+    g = _graph_over(src)
+    engine = CascadeEngine(g)
+    source_id = g.sources()[0].source_id
+
+    src.unlink()
+
+    assert engine.is_mutated(source_id) is True
+    flagged = engine.check_all()  # previously raised FileNotFoundError
+    assert flagged == [g.claims()[0].id]
+    assert g.claims()[0].status is ClaimStatus.STALE
+
+
+def test_check_baseline_flags_deleted_function(tmp_path: Path) -> None:
+    """A function removed from the working tree surfaces as a stale claim.
+
+    Baseline mode (provena check) must derive claims from the baseline AST:
+    the conclusion about the removed function was recorded, so it flags stale
+    instead of silently vanishing from the check.
+    """
+    from provena.demo.agent import ToyAgent
+
+    src = tmp_path / "source.py"
+    _write_source(src, """
+        def a():
+            return 1
+
+        def b():
+            return 2
+    """)
+    baseline = src.read_text(encoding="utf-8")
+    g = ToyAgent(source_path=src).run(baseline_text=baseline)
+
+    # remove function b from the working tree
+    src.write_text("def a():\n    return 1\n", encoding="utf-8")
+
+    engine = CascadeEngine(g)
+    flagged = engine.check_all()
+    flagged_texts = [g.get_claim(c).text for c in flagged]
+    assert any("`b` is defined" in t for t in flagged_texts)
+    # a is untouched -> its claim stays fresh
+    a_claim = next(c for c in g.claims() if "`a` is defined" in c.text)
+    assert a_claim.status is ClaimStatus.FRESH
+
+
+def test_check_baseline_survives_deleted_file(tmp_path: Path) -> None:
+    """Baseline graph building never reads the live file, so a deleted file
+    flags every claim instead of crashing."""
+    from provena.demo.agent import ToyAgent
+
+    src = tmp_path / "source.py"
+    _write_source(src, "def a():\n    return 1\n")
+    baseline = src.read_text(encoding="utf-8")
+    g = ToyAgent(source_path=src).run(baseline_text=baseline)
+
+    src.unlink()  # previously raised FileNotFoundError during check_all
+
+    engine = CascadeEngine(g)
+    flagged = engine.check_all()
+    assert flagged
+    assert all(c.status is ClaimStatus.STALE for c in g.claims())

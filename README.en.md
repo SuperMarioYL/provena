@@ -87,8 +87,12 @@ The CLI exposes the following operations. Commands after the example use your ow
 ```bash
 provena graph --json
 provena check
+# CI / pre-commit gate: exit code 1 when any claim is flagged stale
+provena check --fail-on-stale
 # Interactive local demo server:
 provena demo
+# Version
+provena --version
 ```
 
 ## Configuration

@@ -56,6 +56,13 @@ def _read_span(path: str, start_line: int, end_line: int) -> str:
     return "\n".join(lines[start:end])
 
 
+# A vanished span (file deleted, moved, or unreadable) is the strongest
+# mutation: every claim grounded on it must flag stale, not crash the engine.
+# The sentinel text makes the tombstone hash distinct from any real span's
+# fingerprint (a live span would have to contain exactly this marker line).
+_SPAN_DELETED_HASH = hashlib.sha256(b"<provena:span-deleted>").hexdigest()
+
+
 @runtime_checkable
 class Source(Protocol):
     """Structural interface every provenance anchor implements."""
@@ -124,8 +131,16 @@ class FileSpan:
         )
 
     def current_hash(self) -> str:
-        """Re-fingerprint the span from disk; differs from ``content_hash`` on edit."""
-        return fingerprint_text(_read_span(self.path, self.start_line, self.end_line))
+        """Re-fingerprint the span from disk; differs from ``content_hash`` on edit.
+
+        A missing or unreadable file compares as mutated (deletion is a
+        mutation), so claims grounded on the span flag stale instead of the
+        engine crashing with ``FileNotFoundError``.
+        """
+        try:
+            return fingerprint_text(_read_span(self.path, self.start_line, self.end_line))
+        except OSError:
+            return _SPAN_DELETED_HASH
 
     def summary(self) -> str:
         return f"{self.path}:{self.start_line}-{self.end_line}"
