@@ -115,6 +115,10 @@
     {
       "en": "File line spans can shift after edits. Source selection and graph completeness affect the usefulness of invalidation.",
       "zh": "编辑后文件行片段可能移动；来源选择与图完整性影响失效标记的作用。"
+    },
+    {
+      "en": "The bundled toy agent parses the tracked source as Python. Model-version and web-url sources are modelled interfaces with no live watcher.",
+      "zh": "内置玩具代理将来源按 Python 解析；模型版本与网页来源仅为接口建模，没有实时监听。"
     }
   ],
   "scene": {
@@ -210,6 +214,16 @@
         "body": {
           "en": "Use FileSpan.from_file(path, start, end) to capture a source span. record_claim accepts grounded_on source objects or registered IDs and depends_on claim IDs. Integrations should own graph persistence and re-derivation after receiving stale flags.",
           "zh": "使用 FileSpan.from_file(path, start, end) 捕获来源片段。record_claim 接受 grounded_on 来源对象或已登记 ID，以及 depends_on 结论 ID。集成方应负责图持久化及收到 stale 后的重新推导。"
+        }
+      },
+      {
+        "title": {
+          "en": "When a source is unusable",
+          "zh": "来源不可读时"
+        },
+        "body": {
+          "en": "If a tracked source is missing, is not UTF-8 text, or cannot be parsed as Python, the CLI prints one diagnostic line and exits 2 instead of raising a traceback. At the library level a span whose file can no longer be read compares as mutated, so the claims grounded on it are flagged stale.",
+          "zh": "若被跟踪来源缺失、不是 UTF-8 文本或无法按 Python 解析，CLI 只输出一行诊断并以退出码 2 结束，不再抛出 traceback。库层面，无法再读取的文件片段按已变更处理，其关联结论会被标为 stale。"
         }
       },
       {
