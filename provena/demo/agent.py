@@ -24,6 +24,16 @@ from ..core.source import FileSpan
 SOURCE_FILE = Path(__file__).resolve().parent / "source.py"
 
 
+class SourceUnavailableError(Exception):
+    """The tracked source cannot be used: unreadable as text, or not Python.
+
+    Raised by :meth:`ToyAgent.run` (and by the CLI's git-HEAD baseline reader)
+    so the command-line boundary can report one diagnostic line and exit
+    non-zero instead of leaking a raw ``FileNotFoundError`` /
+    ``UnicodeDecodeError`` / ``SyntaxError`` traceback to the user.
+    """
+
+
 @dataclass
 class ToyAgent:
     """A scripted agent that emits grounded conclusions over ``source.py``."""
@@ -56,8 +66,18 @@ class ToyAgent:
             # instead of surfacing it as stale.
             text = baseline_text
         else:
-            text = self.source_path.read_text(encoding="utf-8")
-        tree = ast.parse(text, filename=str(self.source_path))
+            try:
+                text = self.source_path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError) as exc:
+                raise SourceUnavailableError(
+                    f"cannot read source {self.source_path}: {exc}"
+                ) from exc
+        try:
+            tree = ast.parse(text, filename=str(self.source_path))
+        except SyntaxError as exc:
+            raise SourceUnavailableError(
+                f"source {self.source_path} is not valid Python: {exc}"
+            ) from exc
         n_lines = len(text.splitlines())
 
         func_claims: list[str] = []
@@ -98,7 +118,14 @@ def _span(start: int, end: int, path: Path, baseline_text: str | None) -> FileSp
 
 
 def _top_level_functions(tree: ast.Module) -> list[ast.FunctionDef]:
-    return [n for n in tree.body if isinstance(n, ast.FunctionDef)]
+    # ``async def`` parses to ast.AsyncFunctionDef, a sibling (not a subclass)
+    # of ast.FunctionDef, so both must be matched or an async definition is
+    # silently left ungrounded and can never be flagged stale.
+    return [
+        n
+        for n in tree.body
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+    ]
 
 
 def build_demo_graph(
@@ -117,4 +144,4 @@ def build_demo_graph(
     return agent.run(baseline_text=baseline_text)
 
 
-__all__ = ["ToyAgent", "build_demo_graph", "SOURCE_FILE"]
+__all__ = ["ToyAgent", "SourceUnavailableError", "build_demo_graph", "SOURCE_FILE"]

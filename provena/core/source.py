@@ -135,11 +135,14 @@ class FileSpan:
 
         A missing or unreadable file compares as mutated (deletion is a
         mutation), so claims grounded on the span flag stale instead of the
-        engine crashing with ``FileNotFoundError``.
+        engine crashing with ``FileNotFoundError``. "Unreadable" covers a file
+        that exists but cannot be decoded as UTF-8 text (``UnicodeDecodeError``
+        is a ``ValueError``, not an ``OSError``) as well as a permission or
+        is-a-directory failure.
         """
         try:
             return fingerprint_text(_read_span(self.path, self.start_line, self.end_line))
-        except OSError:
+        except (OSError, UnicodeDecodeError):
             return _SPAN_DELETED_HASH
 
     def summary(self) -> str:

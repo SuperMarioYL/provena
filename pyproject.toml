@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "provena"
-version = "0.2.0"
+version = "0.3.0"
 description = "Record claim-to-source dependencies and mark downstream claims stale when tracked source content changes."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -45,7 +45,7 @@ Issues = "https://github.com/SuperMarioYL/provena/issues"
 packages = ["provena"]
 
 [tool.hatch.build.targets.sdist]
-include = ["provena", "tests", "README.md", "README.en.md", "LICENSE", "VERSION"]
+include = ["provena", "tests", "README.md", "README.en.md", "CHANGELOG.md", "LICENSE", "VERSION"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -28,9 +28,9 @@ import typer
 
 from . import __version__
 from .core.cascade import CascadeEngine
-from .core.graph import ClaimStatus
+from .core.graph import ClaimDependencyGraph, ClaimStatus
 from .core.provenance import trace_provenance
-from .demo.agent import SOURCE_FILE, build_demo_graph
+from .demo.agent import SOURCE_FILE, SourceUnavailableError, build_demo_graph
 
 app = typer.Typer(
     name="provena",
@@ -55,12 +55,32 @@ def _root(
         raise typer.Exit()
 
 
+def _unusable_source(exc: SourceUnavailableError) -> typer.Exit:
+    """Turn an unusable tracked source into a one-line diagnostic + exit 2."""
+    typer.secho(str(exc), fg=typer.colors.RED, err=True)
+    return typer.Exit(code=2)
+
+
+def _graph_or_exit(source, *, baseline_text: str | None = None) -> ClaimDependencyGraph:
+    """Build the demo graph, or exit 2 with a diagnostic if the source is unusable.
+
+    Single error policy for every command that reads the tracked source, so a
+    missing / undecodable / non-Python ``--source`` never leaks a traceback.
+    """
+    try:
+        return build_demo_graph(source, baseline_text=baseline_text)
+    except SourceUnavailableError as exc:
+        raise _unusable_source(exc)
+
+
 def _git_head_text(file_path: Path) -> Optional[str]:
     """Return the git-HEAD content of ``file_path`` relative to its repo, or None.
 
     The committed version is the natural "grounded-at-recording-time" baseline:
     it needs no database and no custom persistence (out_of_scope: in-memory only).
-    Returns None outside a git repo or when the file is untracked.
+    Returns None outside a git repo or when the file is untracked. Raises
+    :class:`SourceUnavailableError` when the file is tracked but its committed
+    content cannot be decoded as UTF-8 text (no usable baseline exists).
     """
     file_path = Path(file_path).resolve()
     try:
@@ -90,6 +110,10 @@ def _git_head_text(file_path: Path) -> Optional[str]:
     except subprocess.CalledProcessError:
         # Untracked file (no HEAD entry) — no baseline to compare against.
         return None
+    except UnicodeDecodeError as exc:
+        raise SourceUnavailableError(
+            f"the committed baseline of {file_path} is not UTF-8 text: {exc}"
+        ) from exc
     return result.stdout
 
 
@@ -107,7 +131,7 @@ def graph(
     ),
 ) -> None:
     """Print the current claim-to-source dependency graph."""
-    g = build_demo_graph(source)
+    g = _graph_or_exit(source)
     if as_json:
         typer.echo(g.to_json(indent=2))
         return
@@ -120,7 +144,7 @@ def trace(
     source: Optional[Path] = typer.Option(None, "--source", help="Demo source file."),
 ) -> None:
     """Show the backward provenance of a claim (its source spans + dependencies)."""
-    g = build_demo_graph(source)
+    g = _graph_or_exit(source)
     if not g.has_claim(claim_id):
         typer.secho(f"unknown claim id: {claim_id}", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=2)
@@ -151,7 +175,10 @@ def check(
     claim and propagates to its dependents. Run after editing the file.
     """
     src = source or SOURCE_FILE
-    baseline = _git_head_text(src)
+    try:
+        baseline = _git_head_text(src)
+    except SourceUnavailableError as exc:
+        raise _unusable_source(exc)
     if baseline is None:
         typer.secho(
             "no git baseline available (not a git repo or file is untracked) — "
@@ -160,7 +187,7 @@ def check(
         )
         raise typer.Exit(code=0)
 
-    g = build_demo_graph(src, baseline_text=baseline)
+    g = _graph_or_exit(src, baseline_text=baseline)
     engine = CascadeEngine(g)
     flagged = engine.check_all()
 
@@ -190,13 +217,17 @@ def demo(
     """Boot the toy agent + local UI server with the live edit -> flag loop."""
     from .ui.server import run_demo
 
-    run_demo(
-        source_path=source or SOURCE_FILE,
-        host=host,
-        port=port,
-        open_browser=not no_browser,
-        watch=not no_watch,
-    )
+    try:
+        run_demo(
+            source_path=source or SOURCE_FILE,
+            host=host,
+            port=port,
+            open_browser=not no_browser,
+            watch=not no_watch,
+        )
+    except SourceUnavailableError as exc:
+        # Raised while create_app builds the startup graph, before uvicorn runs.
+        raise _unusable_source(exc)
 
 
 def _print_graph(g) -> None:

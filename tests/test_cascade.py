@@ -268,3 +268,24 @@ def test_check_baseline_survives_deleted_file(tmp_path: Path) -> None:
     flagged = engine.check_all()
     assert flagged
     assert all(c.status is ClaimStatus.STALE for c in g.claims())
+
+
+def test_unreadable_source_flags_grounded_claims(tmp_path: Path) -> None:
+    """A present-but-undecodable source compares as mutated, not as a crash.
+
+    ``current_hash`` documents "a missing or unreadable file compares as
+    mutated"; a non-UTF-8 file is unreadable *as text* and previously escaped
+    the ``except OSError`` guard with a UnicodeDecodeError (a ValueError).
+    """
+    src = tmp_path / "kb.bin"
+    src.write_bytes(b"limit=10\n\xff\xfe\n")
+    g = ClaimDependencyGraph()
+    # baseline recorded from the decodable part; the live re-read cannot decode.
+    span = FileSpan.from_baseline(src, 1, 1, "limit=10\n")
+    claim = record_claim(g, "The limit is ten.", grounded_on=[span])
+
+    engine = CascadeEngine(g)
+    assert engine.is_mutated(span.source_id) is True
+    flagged = engine.check_all()  # previously raised UnicodeDecodeError
+    assert flagged == [claim.id]
+    assert g.get_claim(claim.id).status is ClaimStatus.STALE

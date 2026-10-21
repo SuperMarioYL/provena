@@ -12,6 +12,7 @@ from textwrap import dedent
 
 import pytest
 
+from provena.core.cascade import CascadeEngine
 from provena.core.graph import ClaimDependencyGraph, ClaimStatus
 from provena.core.provenance import record_claim, trace_provenance
 from provena.core.source import FileSpan, ModelVersion, WebUrl, fingerprint_text
@@ -137,6 +138,44 @@ def test_toy_agent_rerun_into_same_graph_is_stable(tmp_path: Path) -> None:
     agent.run(graph=g)  # previously raised ValueError: duplicate claim id
     # one claim per function + the module-level summary claim
     assert len(g.claims()) == 3
+
+
+def test_toy_agent_grounds_async_function_definitions(tmp_path: Path) -> None:
+    """``async def`` is a function definition and must get a grounded claim.
+
+    The agent's contract is one claim per top-level function definition, but
+    ``ast.AsyncFunctionDef`` is a sibling (not a subclass) of
+    ``ast.FunctionDef``, so async definitions were silently ungrounded and
+    could never be flagged stale.
+    """
+    from provena.demo.agent import ToyAgent
+
+    src = tmp_path / "source.py"
+    _write_source(src, """
+        def sync_fn(a: int) -> int:
+            return a
+
+        async def async_fn(b: int) -> int:
+            return b
+    """)
+    g = ToyAgent(source_path=src).run()
+
+    texts = [c.text for c in g.claims()]
+    assert any("`sync_fn` is defined" in t for t in texts)
+    assert any("`async_fn` is defined" in t for t in texts)
+    # one claim per function + the module-level summary claim
+    assert len(g.claims()) == 3
+    # the async function's span participates in cascade invalidation
+    async_claim = next(c for c in g.claims() if "`async_fn` is defined" in c.text)
+    engine = CascadeEngine(g)
+    src.write_text(
+        "def sync_fn(a: int) -> int:\n    return a\n\n"
+        "async def async_fn(b: int, c: int) -> int:\n    return b\n",
+        encoding="utf-8",
+    )
+    flagged = engine.check_all()
+    assert async_claim.id in flagged
+    assert g.get_claim(async_claim.id).status is ClaimStatus.STALE
 
 
 # --- trace ----------------------------------------------------------------
