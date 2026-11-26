@@ -222,8 +222,8 @@
           "zh": "来源不可读时"
         },
         "body": {
-          "en": "If a tracked source is missing, is not UTF-8 text, or cannot be parsed as Python, the CLI prints one diagnostic line and exits 2 instead of raising a traceback. At the library level a span whose file can no longer be read compares as mutated, so the claims grounded on it are flagged stale.",
-          "zh": "若被跟踪来源缺失、不是 UTF-8 文本或无法按 Python 解析，CLI 只输出一行诊断并以退出码 2 结束，不再抛出 traceback。库层面，无法再读取的文件片段按已变更处理，其关联结论会被标为 stale。"
+          "en": "If a tracked source is missing, is not UTF-8 text, or cannot be parsed as Python, the CLI prints one diagnostic line and exits 2 instead of raising a traceback. At the library level a span whose file can no longer be read compares as mutated, so the claims grounded on it are flagged stale. When no git baseline exists — an untracked file, a checkout without the file committed, or the packaged demo source — nothing was verified, so the --fail-on-stale gate exits 2 rather than reporting a pass.",
+          "zh": "若被跟踪来源缺失、不是 UTF-8 文本或无法按 Python 解析，CLI 只输出一行诊断并以退出码 2 结束，不再抛出 traceback。库层面，无法再读取的文件片段按已变更处理，其关联结论会被标为 stale。没有 git 基线时（文件未纳入版本库、检出中缺少该文件提交，或使用包内自带示例来源），没有任何内容被验证，因此 --fail-on-stale 以退出码 2 结束，而不会报告通过。"
         }
       },
       {
