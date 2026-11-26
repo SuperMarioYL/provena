@@ -3,6 +3,46 @@
 All notable changes to this project are recorded here. Versions follow
 [semver](https://semver.org/); the released version is the git tag.
 
+## v0.4.0
+
+Bug-hunt release. Four reproducible defects in the v0.3.0 source are fixed, and
+the version lockstep guard now covers the product site's content version.
+
+### Fixed
+
+- **A decorated definition is grounded on its decorators.** `ast` reports
+  `node.lineno` as the `def` line and gives each decorator its own line, so the
+  toy agent's span (and the claim text citing it) started *after* the
+  decorators: editing only a decorator — a route path, a cache size — left that
+  claim fresh while `provena trace` still reported it fresh on a span that did
+  not cover the definition. Spans now start at the first decorator
+  (`provena/demo/agent.py`).
+- **A source with no top-level function is still verified.** The module-level
+  claim was guarded by `if func_claims:`, so a constants module, a package
+  `__init__` or an empty file produced a graph with zero claims, and
+  `provena check --fail-on-stale` printed "no stale claims" and exited 0 after
+  the tracked file changed. The module claim is now always recorded, so a
+  parseable source cannot yield an unverified graph (`provena/demo/agent.py`).
+- **`provena check --fail-on-stale` no longer passes what it could not check.**
+  Without a git baseline (not a repo, untracked file, no commit, or the packaged
+  default source), the gate exited 0 — a CI / pre-commit pass for a file nothing
+  was verified on. It now exits 2 and says nothing was verified; the
+  informational invocation still exits 0 (`provena/cli.py`).
+- **Re-recording a conclusion clears its stale flag.** Re-deriving through
+  `record_claim` / the toy agent adopted the new content hash as the baseline
+  but left the claim `stale` forever, so the graph reported "nothing left to
+  re-derive" next to a stale claim. An identity-identical re-recording now
+  adopts the incoming status, and `add_source`'s docstring matches its
+  replace-the-stored-copy behavior. Mutation detection still recomputes from
+  hashes, so a re-emission over still-drifted sources is re-flagged
+  (`provena/core/graph.py`).
+
+### Added
+
+- `tests/test_version_lockstep.py` now also asserts `web/site.json`
+  `content_version` matches the package version, closing the last
+  hand-maintained version surface.
+
 ## v0.3.0
 
 Bug-hunt release. Three reproducible defects in the v0.2.0 source are fixed, and

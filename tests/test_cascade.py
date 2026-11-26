@@ -289,3 +289,48 @@ def test_unreadable_source_flags_grounded_claims(tmp_path: Path) -> None:
     flagged = engine.check_all()  # previously raised UnicodeDecodeError
     assert flagged == [claim.id]
     assert g.get_claim(claim.id).status is ClaimStatus.STALE
+
+
+# --- re-derivation: recording it must clear the flag ----------------------
+
+
+def test_rederivation_clears_stale_flag(tmp_path: Path) -> None:
+    """Re-recording a conclusion from current sources clears its stale flag.
+
+    A re-derivation adopted the new content hash as the baseline but left the
+    claim stale forever, so the graph reported ``check_all() == []`` (nothing
+    left to re-derive) next to a claim that still read stale.
+    """
+    from provena.demo.agent import ToyAgent
+
+    src = tmp_path / "source.py"
+    _write_source(src, "def a():\n    return 1\n")
+    g = ClaimDependencyGraph()
+    agent = ToyAgent(source_path=src)
+    agent.run(graph=g)
+    claim = next(c for c in g.claims() if "`a` is defined" in c.text)
+
+    src.write_text("def a():\n    return 2\n", encoding="utf-8")
+    assert CascadeEngine(g).check_all()
+    assert g.get_claim(claim.id).status is ClaimStatus.STALE
+
+    agent.run(graph=g)  # re-derive over the current content
+    assert g.get_claim(claim.id).status is ClaimStatus.FRESH
+    assert CascadeEngine(g).check_all() == []
+
+
+def test_rederivation_without_new_evidence_stays_stale(tmp_path: Path) -> None:
+    """Re-emitting a claim with the old span is re-flagged by the next check."""
+    src = tmp_path / "kb.py"
+    _write_source(src, "def f():\n    return 1\n")
+    g = ClaimDependencyGraph()
+    span = FileSpan.from_file(src, 1, 2)
+    claim = record_claim(g, "f returns 1.", grounded_on=[span])
+
+    src.write_text("def f():\n    return 2\n", encoding="utf-8")
+    assert CascadeEngine(g).check_all() == [claim.id]
+
+    # same recorded evidence (the old span object) -> still drifted
+    record_claim(g, "f returns 1.", grounded_on=[span])
+    assert CascadeEngine(g).check_all() == [claim.id]
+    assert g.get_claim(claim.id).status is ClaimStatus.STALE

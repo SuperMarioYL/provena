@@ -173,6 +173,10 @@ def check(
     Builds the graph from the *committed* (git HEAD) version of the source file,
     then re-reads each span from the working tree. Any drift flags the grounded
     claim and propagates to its dependents. Run after editing the file.
+
+    ``--fail-on-stale`` is the gate: exit 1 when claims are flagged, and exit 2
+    when there is no baseline to verify against (nothing was checked, so a CI /
+    pre-commit run must not read the result as clean).
     """
     src = source or SOURCE_FILE
     try:
@@ -182,9 +186,12 @@ def check(
     if baseline is None:
         typer.secho(
             "no git baseline available (not a git repo or file is untracked) — "
-            "commit the source first, or run `provena demo` for live detection.",
+            "nothing was verified; commit the source first, or run "
+            "`provena demo` for live detection.",
             fg=typer.colors.YELLOW,
         )
+        if fail_on_stale:
+            raise typer.Exit(code=2)
         raise typer.Exit(code=0)
 
     g = _graph_or_exit(src, baseline_text=baseline)

@@ -114,3 +114,39 @@ def test_check_undecodable_baseline_reports_error_not_traceback(
     result = runner.invoke(app, ["check", "--source", str(src)])
     assert result.exit_code == 2
     assert not isinstance(result.exception, UnicodeDecodeError)
+
+
+def test_check_flags_edit_to_functionless_source(tmp_path: Path, monkeypatch) -> None:
+    """A source with no function definition is verified, not silently clean.
+
+    The toy agent skipped the module claim when there were no function claims,
+    so the graph was empty and ``check --fail-on-stale`` exited 0 after the
+    tracked constant changed — a gate passing a file nothing was verified on.
+    """
+    src = tmp_path / "constants.py"
+    _write_source(src, "LIMIT = 10\nNAME = 'demo'\n")
+    baseline = src.read_text(encoding="utf-8")
+    monkeypatch.setattr("provena.cli._git_head_text", lambda p: baseline)
+
+    clean = runner.invoke(app, ["check", "--source", str(src), "--fail-on-stale"])
+    assert clean.exit_code == 0
+    assert "no stale claims" in clean.stdout
+
+    src.write_text("LIMIT = 20\nNAME = 'demo'\n", encoding="utf-8")
+    gated = runner.invoke(app, ["check", "--source", str(src), "--fail-on-stale"])
+    assert gated.exit_code == 1
+    assert "flagged stale" in gated.stdout
+
+
+def test_check_gate_exits_2_when_no_baseline(tmp_path: Path, monkeypatch) -> None:
+    """No baseline means nothing was verified: the gate must not exit 0."""
+    src = tmp_path / "kb.py"
+    _write_source(src, "def f():\n    return 1\n")
+    monkeypatch.setattr("provena.cli._git_head_text", lambda p: None)
+
+    gated = runner.invoke(app, ["check", "--source", str(src), "--fail-on-stale"])
+    assert gated.exit_code == 2
+    assert "nothing was verified" in gated.stdout
+
+    informational = runner.invoke(app, ["check", "--source", str(src)])
+    assert informational.exit_code == 0

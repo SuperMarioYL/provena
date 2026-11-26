@@ -87,7 +87,7 @@ The CLI exposes the following operations. Commands after the example use your ow
 ```bash
 provena graph --json
 provena check
-# CI / pre-commit gate: exit code 1 when any claim is flagged stale
+# CI / pre-commit gate: exit 1 when a claim is flagged stale, 2 when there is no baseline to verify
 provena check --fail-on-stale
 # Interactive local demo server:
 provena demo

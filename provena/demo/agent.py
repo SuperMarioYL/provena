@@ -2,8 +2,9 @@
 
 Not a real agent framework plugin (explicitly out of scope for v0.1). This is
 a deterministic, scripted emitter: it walks ``demo/source.py`` with the AST and
-records one claim per function definition, grounded on that function's source
-span, plus a higher-level claim that depends on the per-function ones.
+records one claim per function definition, grounded on that definition's source
+span (decorators included), plus a higher-level claim about the module as a
+whole that depends on the per-function ones.
 
 The point is to produce a *real* claim-to-source graph grounded on real spans
 of a real file, so the cascade engine has something to invalidate when the file
@@ -82,7 +83,8 @@ class ToyAgent:
 
         func_claims: list[str] = []
         for node in _top_level_functions(tree):
-            span = _span(node.lineno, getattr(node, "end_lineno", node.lineno),
+            span = _span(_definition_start(node),
+                         getattr(node, "end_lineno", node.lineno),
                          self.source_path, baseline_text)
             claim = record_claim(
                 graph,
@@ -96,19 +98,32 @@ class ToyAgent:
 
         # A higher-level conclusion that builds on the per-function claims —
         # the node that goes stale transitively when any function is refactored.
-        if func_claims:
-            span = _span(1, n_lines, self.source_path, baseline_text)
-            record_claim(
-                graph,
-                text=(
-                    "The module exposes a stable public surface of callables "
-                    "that compose into build_profile — grounded on the whole file."
-                ),
-                grounded_on=[span],
-                depends_on=func_claims,
-            )
+        # Always recorded: a source with no top-level function still needs one
+        # grounded claim, otherwise the graph is empty and `provena check`
+        # reports "no stale claims" for a file where nothing was ever verified.
+        # The end line is floored at 1 so an empty file stays sensitive to the
+        # first line of content written into it.
+        span = _span(1, max(1, n_lines), self.source_path, baseline_text)
+        record_claim(
+            graph,
+            text="The module's public surface is grounded on the whole file.",
+            grounded_on=[span],
+            depends_on=func_claims,
+        )
 
         return graph
+
+
+def _definition_start(node: ast.FunctionDef | ast.AsyncFunctionDef) -> int:
+    """First line of a definition, decorators included.
+
+    ``ast`` reports ``node.lineno`` as the ``def``/``async def`` line and gives
+    each decorator its own line, so anchoring the span there silently excludes
+    the decorators from the claim's evidence: a decorator-only edit (a route
+    path, a cache size) would leave the claim fresh and cite a span that does
+    not cover the definition.
+    """
+    return min([node.lineno, *(d.lineno for d in node.decorator_list)])
 
 
 def _span(start: int, end: int, path: Path, baseline_text: str | None) -> FileSpan:
@@ -117,7 +132,7 @@ def _span(start: int, end: int, path: Path, baseline_text: str | None) -> FileSp
     return FileSpan.from_file(path, start, end)
 
 
-def _top_level_functions(tree: ast.Module) -> list[ast.FunctionDef]:
+def _top_level_functions(tree: ast.Module) -> list[ast.FunctionDef | ast.AsyncFunctionDef]:
     # ``async def`` parses to ast.AsyncFunctionDef, a sibling (not a subclass)
     # of ast.FunctionDef, so both must be matched or an async definition is
     # silently left ungrounded and can never be flagged stale.

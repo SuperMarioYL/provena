@@ -60,7 +60,15 @@ class ClaimDependencyGraph:
     # -- mutation ---------------------------------------------------------
 
     def add_source(self, source: Source) -> Source:
-        """Register a source (idempotent — re-adding returns the stored copy)."""
+        """Register a source; re-registering an anchor replaces the stored copy.
+
+        ``source_id`` identifies the anchor (for a :class:`FileSpan` its path and
+        line range), not the content. Re-registering the same anchor therefore
+        adopts the supplied content as the recorded baseline — how a caller that
+        re-derives a conclusion from the current file records the evidence it
+        used. Mutation detection compares against whichever copy was registered
+        last.
+        """
         self._sources[source.source_id] = source
         return source
 
@@ -89,8 +97,13 @@ class ClaimDependencyGraph:
                 raise ValueError(f"duplicate claim id: {claim.id!r}")
             # Identical re-derivation lands on the stored node (see
             # ``provenance._claim_id``: stable ids exist so re-emitting the
-            # same conclusion is a no-op, not a crash). created_at/status of
-            # the stored node are left untouched.
+            # same conclusion is a no-op, not a crash). created_at is kept, but
+            # the stored node adopts the incoming status: the caller has just
+            # re-derived the conclusion, so a stale flag must be clearable by
+            # re-recording it. Mutation detection still recomputes from hashes,
+            # so re-emitting over still-drifted sources is re-flagged by the
+            # next check.
+            existing.status = claim.status
             return existing
         self._claims[claim.id] = claim
         for sid in claim.grounded_on:

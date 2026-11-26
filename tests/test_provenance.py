@@ -178,6 +178,79 @@ def test_toy_agent_grounds_async_function_definitions(tmp_path: Path) -> None:
     assert g.get_claim(async_claim.id).status is ClaimStatus.STALE
 
 
+def test_toy_agent_grounds_decorated_definition_span(tmp_path: Path) -> None:
+    """A decorated definition's span starts at the decorator, not at ``def``.
+
+    ``ast`` reports ``node.lineno`` as the ``def`` line, so a span anchored
+    there excluded the decorators: editing only the decorator (a route path, a
+    cache size) left the claim fresh while its cited span did not cover the
+    changed line.
+    """
+    from provena.demo.agent import ToyAgent
+
+    src = tmp_path / "handlers.py"
+    _write_source(src, """
+        import functools
+
+        @functools.lru_cache(maxsize=1)
+        def resolve(name: str) -> str:
+            return name
+    """)
+    g = ToyAgent(source_path=src).run()
+    claim = next(c for c in g.claims() if "`resolve` is defined" in c.text)
+    span = g.grounded_sources(claim.id)[0]
+    assert span.start_line == 3  # the decorator line
+    assert span.summary() == f"{src}:3-5"
+
+    # edit ONLY the decorator argument; the def line is untouched
+    _write_source(src, """
+        import functools
+
+        @functools.lru_cache(maxsize=None)
+        def resolve(name: str) -> str:
+            return name
+    """)
+    flagged = CascadeEngine(g).check_all()
+    assert claim.id in flagged
+    assert g.get_claim(claim.id).status is ClaimStatus.STALE
+
+
+def test_toy_agent_grounds_functionless_module(tmp_path: Path) -> None:
+    """A source with no function definition still gets one verified claim.
+
+    The module claim was guarded by ``if func_claims:``, so a constants module
+    produced a zero-claim/zero-source graph and ``provena check`` printed
+    "no stale claims" for a file it never verified.
+    """
+    from provena.demo.agent import ToyAgent
+
+    src = tmp_path / "constants.py"
+    _write_source(src, "LIMIT = 10\nNAME = 'demo'\n")
+    g = ToyAgent(source_path=src).run()
+
+    assert len(g.claims()) == 1
+    claim = g.claims()[0]
+    assert g.grounded_sources(claim.id)[0].summary() == f"{src}:1-2"
+
+    src.write_text("LIMIT = 20\nNAME = 'demo'\n", encoding="utf-8")
+    assert CascadeEngine(g).check_all() == [claim.id]
+    assert g.get_claim(claim.id).status is ClaimStatus.STALE
+
+
+def test_toy_agent_grounds_empty_module(tmp_path: Path) -> None:
+    """An empty source is grounded on line 1, so new content flags it."""
+    from provena.demo.agent import ToyAgent
+
+    src = tmp_path / "empty.py"
+    src.write_text("", encoding="utf-8")
+    g = ToyAgent(source_path=src).run()
+
+    assert len(g.claims()) == 1
+    claim = g.claims()[0]
+    src.write_text("X = 1\n", encoding="utf-8")
+    assert CascadeEngine(g).check_all() == [claim.id]
+
+
 # --- trace ----------------------------------------------------------------
 
 

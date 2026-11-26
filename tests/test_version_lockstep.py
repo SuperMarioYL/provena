@@ -9,6 +9,7 @@ requiring a human to read every file.
 
 from __future__ import annotations
 
+import json
 import tomllib
 from pathlib import Path
 
@@ -38,6 +39,12 @@ def test_version_surfaces_agree() -> None:
         "provena.__version__": provena.__version__,
     }
     assert len(set(surfaces.values())) == 1, f"version drift across surfaces: {surfaces}"
+
+
+def test_site_content_version_matches_package_version() -> None:
+    """The product site's content version is a hand-maintained surface too."""
+    site = json.loads((REPO_ROOT / "web" / "site.json").read_text(encoding="utf-8"))
+    assert site["content_version"] == provena.__version__
 
 
 def test_cli_version_matches_package_version() -> None:
